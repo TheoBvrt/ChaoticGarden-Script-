@@ -6,6 +6,7 @@ using Mirror;
 using Telepathy;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.InputSystem.Switch;
 using Object = System.Object;
 
 public class Plot : NetworkBehaviour
@@ -24,11 +25,16 @@ public class Plot : NetworkBehaviour
     
     public GameObject[] carrotModels;
     public GameObject[] tomatoModels;
+
+    private GameController gameController;
+    private ObjectData objectData;
     
     private void Start()
     {
         DisableAllModel();
         plotUsable = true;
+        gameController = GameObject.FindWithTag("GameManager").GetComponent<GameController>();
+        objectData = GameObject.FindWithTag("GameManager").GetComponent<ObjectData>();
     }
     
     [Command(requiresAuthority = false)]
@@ -46,7 +52,6 @@ public class Plot : NetworkBehaviour
                     playerObjectValue.tomatoSeedsInBag--;
                 if (choice == ObjectId.CarrotSeedBag)
                     playerObjectValue.carrotSeedInBag--;
-            
                 PlotManager(currentSeed);
             }
             return;
@@ -55,27 +60,14 @@ public class Plot : NetworkBehaviour
         if (readyToRecolt)
         {
             currentPlayer = player;
+            GiveItem(currentSeed, player);
             Recolt();
             readyToRecolt = false;
             plotUsable = true;
-            currentSeed = 0;
+            currentSeed = ObjectId.Nothing;
         }
     }
-    
-    [ClientRpc]
-    private void PlotManager(ObjectId seed)
-    {
-        switch (seed)
-        {
-            case ObjectId.TomatoSeedBag:
-                StartCoroutine(SowSeed("Tomato", 2, tomatoModels));
-                break;
-            case ObjectId.CarrotSeedBag:
-                StartCoroutine(SowSeed("Carrot", 2, carrotModels));
-                break;
-        }
-    }
-    
+
     IEnumerator SowSeed(string seedName, int seedDelay, GameObject[] step)
     {
         for (int i = 0; i < 3; i++)
@@ -110,5 +102,54 @@ public class Plot : NetworkBehaviour
     private void Recolt()
     {
         DisableAllModel();
+    }
+
+    private void GiveItem(ObjectId seed, GameObject player)
+    {
+        
+        var localObjectValue = player.GetComponent<LocalObjectValue>();
+        switch (seed)
+        { 
+            case ObjectId.TomatoSeedBag:
+                localObjectValue.tomato += CheckPlayerInventory(gameController.giveTomatoValue, localObjectValue.tomato, 
+                    ObjectId.Tomato);
+                break;
+            case ObjectId.CarrotSeedBag:
+                localObjectValue.carrot += CheckPlayerInventory(gameController.giveCarrotValue, localObjectValue.carrot, 
+                    ObjectId.Carrot);
+                break;
+        }
+    }
+    
+    [ClientRpc]
+    private void PlotManager(ObjectId seed)
+    {
+        switch (seed)
+        {
+            case ObjectId.TomatoSeedBag:
+                StartCoroutine(SowSeed("Tomato", (int)gameController.tomatoSeedUpdate, tomatoModels));
+                break;
+            case ObjectId.CarrotSeedBag:
+                StartCoroutine(SowSeed("Carrot", (int)gameController.carrotSeedUpdate, carrotModels));
+                break;
+        }
+    }
+
+    private int CheckPlayerInventory(int gameControllerGiveValue, int localObjectValue, ObjectId objectId)
+    {
+        var giveValue = gameControllerGiveValue;
+        var objectManager =  currentPlayer.GetComponent<ObjectManager>();
+        if (localObjectValue != 0 || objectManager.objectEquiped)
+        {
+            print("Instancing...");
+            var objectInstantiated = Instantiate(objectData.chaoticGardenObjects[objectId]);
+            objectInstantiated.transform.position = currentPlayer.transform.Find("SpawnPos").position;
+            NetworkServer.Spawn(objectInstantiated);
+            return (0);
+        }
+        objectManager.equipedObjectId = objectId;
+        objectManager.objectEquiped = true;
+        print(objectId);
+        return (giveValue);
     }
 }

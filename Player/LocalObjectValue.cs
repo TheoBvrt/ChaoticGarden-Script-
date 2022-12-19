@@ -8,6 +8,8 @@ public class LocalObjectValue : NetworkBehaviour
 {
     [SyncVar] public int tomatoSeedsInBag;
     [SyncVar] public int carrotSeedInBag;
+    [SyncVar] public int tomato;
+    [SyncVar] public int carrot;
 
     [Command(requiresAuthority = false)]
     public void CmdAddTomatoSeed(int value)
@@ -25,7 +27,9 @@ public class LocalObjectValue : NetworkBehaviour
     {
         tomatoSeedsInBag = 0;
         carrotSeedInBag = 0;
+        tomato = 0;
+        carrot = 0;
     }
-    
+
 }
 

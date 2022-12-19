@@ -1,8 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Class.ObjectManager;
 using Mirror;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerMotor : NetworkBehaviour
@@ -10,12 +10,14 @@ public class PlayerMotor : NetworkBehaviour
     private float speed = 10;
     private float sprintSpeed = 14;
     private float tmpSpeed;
+    private Interaction interaction;
     
     [SerializeField] private Transform cam;
     Rigidbody rb;
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
+        interaction = GetComponent<Interaction>();
         rb = GetComponent<Rigidbody>();
         tmpSpeed = speed;
     }
@@ -37,20 +39,16 @@ public class PlayerMotor : NetworkBehaviour
                 transform.Translate(direction * (speed * Time.deltaTime));
             }
 
-            if (Input.GetKeyDown(KeyCode.Q) && GetComponent<ObjectManager>().objectEquiped)
+            if (Input.GetKeyDown(KeyCode.E) && GetComponent<ObjectManager>().objectEquiped)
             {
                 CmdToolEquiped(0);
-                GetComponent<ObjectManager>().DropObject();
+                GetComponent<ObjectManager>().DropObject(DropType.DropOnPoint);
             }
 
             if (Input.GetKey(KeyCode.LeftShift))
-            {
                 speed = sprintSpeed;
-            }
             else
-            {
                 speed = tmpSpeed;
-            }
         }
     }
 

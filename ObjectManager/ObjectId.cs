@@ -4,6 +4,8 @@
     {
         Nothing = -1,
         CarrotSeedBag = 0,
-        TomatoSeedBag
+        TomatoSeedBag,
+        Tomato,
+        Carrot,
     }
 }

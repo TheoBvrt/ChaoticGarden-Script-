@@ -12,6 +12,7 @@ public class Setup : NetworkBehaviour
 {
     public TextMeshPro pseudo;
     public bool stopMenu;
+    public GameObject finishedMessage;
     
     [SerializeField] private Behaviour[] componentsToDisable;
     [SerializeField] private GameObject localText;
@@ -44,6 +45,16 @@ public class Setup : NetworkBehaviour
         var tmp = "player" + Random.Range(0, 500);
         SetupPlayer(tmp, "" + tmp + " Viens de connecter !");
         base.OnStartClient();
+        CmdAddPlayer();
+    }
+    
+    private void CmdAddPlayer()
+    {
+        if (isLocalPlayer)
+        {
+            var gameController = GameObject.FindWithTag("GameManager").GetComponent<GameController>();
+            gameController.AddPlayer(gameObject);
+        }
     }
     
     private void Update()

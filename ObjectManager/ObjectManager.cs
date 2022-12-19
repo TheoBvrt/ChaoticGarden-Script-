@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Class.ObjectManager;
 using Mirror;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class ObjectManager : NetworkBehaviour
 {
@@ -12,21 +13,14 @@ public class ObjectManager : NetworkBehaviour
     [SerializeField] private GameObject[] localObject;
     [SerializeField] private GameObject[] spawnableObject;
     [SerializeField] private GameObject spawnPos;
-    [SyncVar] private Vector3 spawnPoint;
+    [SerializeField] private Image currentItemIcon;
+    private GameController gameController;
     private Interaction interaction;
     private void Start()
     {
         interaction = GetComponent<Interaction>();
-        spawnPoint = interaction.hitPoint;
     }
-
-    private void Update()
-    {
-        if (Input.GetMouseButtonDown(0))
-        {
-            print("Action");
-        }
-    }
+    
 
     [Command]
     public void ToolSelector(ObjectId objectId)
@@ -35,7 +29,7 @@ public class ObjectManager : NetworkBehaviour
     }
     
     [Command(requiresAuthority = false)]
-    public void DropObject()
+    public void DropObject(DropType dropType)
     {
         if (objectEquiped == false)
         {                
@@ -53,12 +47,20 @@ public class ObjectManager : NetworkBehaviour
             while (spawnableObject[index].GetComponent<ObjectIdentification>().objectId != tmp)
                 index++;
             var objectInstance = Instantiate(spawnableObject[index]);
-            //objectInstance.transform.position = spawnPoint;
-            objectInstance.transform.position = spawnPos.transform.position;
-            objectInstance.transform.rotation = spawnPos.transform.rotation;
+            if (dropType == DropType.DropOnPoint && interaction.hitDistance <= interaction.maxRange)
+            {
+                objectInstance.transform.position = new Vector3(interaction.hitPoint.x, 
+                    interaction.hitPoint.y + (100 * Time.deltaTime), interaction.hitPoint.z);
+            }
+            else
+            {
+                objectInstance.transform.position = spawnPos.transform.position;
+                objectInstance.transform.rotation = spawnPos.transform.rotation; 
+            }
+            
             SetNewValue(objectInstance, localObjectValue);
-            localObjectValue.FullResetValue();
             NetworkServer.Spawn(objectInstance);
+            localObjectValue.FullResetValue();
         }
     }
     
@@ -71,6 +73,9 @@ public class ObjectManager : NetworkBehaviour
             {
                 localObject[i].SetActive(false);
             }
+
+            if (isLocalPlayer)
+                currentItemIcon.sprite = null;
         }
         else
         {
@@ -81,15 +86,24 @@ public class ObjectManager : NetworkBehaviour
             while (localObject[index].GetComponent<ObjectIdentification>().objectId != equipedObjectId)
                 index++;
             localObject[index].SetActive(true);
+            if (isLocalPlayer)
+                currentItemIcon.sprite = localObject[index].GetComponent<ObjectIdentification>().icon;
         }
+    }
+
+    public void DeleteEquipedObject()
+    {
+        objectEquiped = false;
+        equipedObjectId = ObjectId.Nothing;
+        GetComponent<LocalObjectValue>().FullResetValue();
     }
 
     private void SetNewValue(GameObject instantiatedObject, LocalObjectValue localObjectValue)
     {
         ObjectIdentification objectIdentification = instantiatedObject.GetComponent<ObjectIdentification>();
         if (objectIdentification.objectId == ObjectId.TomatoSeedBag)
-            instantiatedObject.GetComponent<TomatoSeedBag>().seedValue = localObjectValue.tomatoSeedsInBag;
+            instantiatedObject.GetComponent<TomatoSeedBag>().SetNewValue(localObjectValue.tomatoSeedsInBag);
         if (objectIdentification.objectId == ObjectId.CarrotSeedBag)
-            instantiatedObject.GetComponent<CarrotSeedBag>().seedValue = localObjectValue.carrotSeedInBag;
+            instantiatedObject.GetComponent<CarrotSeedBag>().SetNewValue(localObjectValue.carrotSeedInBag);
     }
 }
